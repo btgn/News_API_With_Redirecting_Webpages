@@ -24,7 +24,7 @@ import static android.content.ContentValues.TAG;
  */
 
 public class NetworkUtils {
-    public static final String NEWSAPI_BASE_URL = "https://newsapi.org/v1/articles?source=the-next-web&sortBy=latest&apiKey=8eee4df4a54c40eba1f140c8116f344c";
+    public static final String NEWSAPI_BASE_URL = "https://newsapi.org/v1/articles?source=the-next-web&sortBy=latest&apiKey=";
     public static final String PARAM_QUERY = "q";
 
     public static URL makeURL(String searchQuery) {
