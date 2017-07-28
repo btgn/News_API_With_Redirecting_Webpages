@@ -1,8 +1,15 @@
 package com.example.btril.newsapp;
 
+import android.content.AsyncTaskLoader;
 import android.content.Intent;
+import android.content.Loader;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
+import android.support.v4.app.LoaderManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -13,21 +20,20 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 
-import com.example.btril.newsapp.modelClass.NewsItem;
+import com.example.btril.newsapp.modelClass.Contract;
+import com.example.btril.newsapp.modelClass.DBHelper;
+import com.example.btril.newsapp.modelClass.DatabaseUtils;
 
-import org.json.JSONException;
-
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Void>, NewsAdapter.ItemClickListener {
     static final String TAG = "mainactivty";
     private ProgressBar progress;
     private EditText search;
     private RecyclerView recyclerView;
+    private NewsAdapter adapter;
+    private Cursor cursor;
+    private SQLiteDatabase sdb;
+    private static final int NEWS_LOADER = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,8 +44,39 @@ public class MainActivity extends AppCompatActivity {
         search = (EditText) findViewById(R.id.searchQuery);
         recyclerView = (RecyclerView) findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        search.setVisibility(View.GONE);
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean first = sp.getBoolean("first", true);
 
+        if (first) {
+            load();
+            SharedPreferences.Editor edit = sp.edit();
+            edit.putBoolean("first", false);
+            edit.commit();
+        }
+
+    }
+
+    private void load() {
+        LoaderManager loaderManager = getSupportLoaderManager();
+        loaderManager.restartLoader(NEWS_LOADER, null, this).forceLoad();
+
+    }
+
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        sdb = new DBHelper(MainActivity.this).getReadableDatabase();
+        cursor = DatabaseUtils.getAll(sdb);
+        adapter = new NewsAdapter(cursor, this);
+        recyclerView.setAdapter(adapter);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        sdb.close();
+        cursor.close();
     }
 
     @Override
@@ -53,13 +90,62 @@ public class MainActivity extends AppCompatActivity {
         int itemNumber = item.getItemId();
         if (itemNumber == R.id.search) {
             String s = search.getText().toString();
-            NetworkTask nt = new NetworkTask(s);
-            nt.execute();
+            load();
+//            NetworkTask nt = new NetworkTask(s);
+//            nt.execute();
         }
         return true;
     }
 
-    class NetworkTask extends AsyncTask<URL, Void, ArrayList<NewsItem>> {
+    @Override
+    public android.support.v4.content.Loader<Void> onCreateLoader(int id, final Bundle args) {
+        return new android.support.v4.content.AsyncTaskLoader<Void>(this) {
+
+            @Override
+            protected void onStartLoading() {
+                super.onStartLoading();
+                progress.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public Void loadInBackground() {
+                RefreshTasks.refreshArticles(MainActivity.this);
+                return null;
+            }
+
+        };
+    }
+
+    @Override
+    public void onLoadFinished(android.support.v4.content.Loader<Void> loader, Void data) {
+        progress.setVisibility(View.GONE);
+        sdb = new DBHelper(MainActivity.this).getReadableDatabase();
+        cursor = DatabaseUtils.getAll(sdb);
+
+        adapter = new NewsAdapter(cursor, this);
+        recyclerView.setAdapter(adapter);
+        adapter.notifyDataSetChanged();
+    }
+
+
+    @Override
+    public void onLoaderReset(android.support.v4.content.Loader<Void> loader) {
+
+    }
+
+
+    public void onItemClick(Cursor cursor, int itemIndex) {
+        cursor.moveToPosition(itemIndex);
+        String url = cursor.getString(cursor.getColumnIndex(Contract.TABLE_ARTICLES.COLUMN_NAME_URL));
+        Log.d(TAG, String.format("Url %s", url));
+
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse(url));
+        startActivity(intent);
+    }
+
+
+    /*class NetworkTask extends AsyncTask<URL, Void, ArrayList<NewsItem>> {
         String query;
 
         public NetworkTask(String s) {
@@ -70,13 +156,13 @@ public class MainActivity extends AppCompatActivity {
         protected void onPreExecute() {
             super.onPreExecute();
             progress.setVisibility(View.VISIBLE);
-            search.setVisibility(View.GONE);
+
         }
 
         @Override
         protected ArrayList<NewsItem> doInBackground(URL... params) {
             ArrayList<NewsItem> res = null;
-            URL url = NetworkUtils.makeURL(query);
+            URL url = NetworkUtils.makeURL("the-next-web");
             Log.d(TAG, "url:" + url.toString());
             try {
                 String json = NetworkUtils.getResponseFromHttpUrl(url);
@@ -92,7 +178,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(final ArrayList<NewsItem> data) {
             super.onPostExecute(data);
-            search.setVisibility(View.GONE);
+
             progress.setVisibility(View.GONE);
             if (data != null) {
                 NewsAdapter news = new NewsAdapter(data, new NewsAdapter.ItemClickListener() {
@@ -109,6 +195,6 @@ public class MainActivity extends AppCompatActivity {
                 recyclerView.setAdapter(news);
             }
         }
-    }
+    }*/
 
 }

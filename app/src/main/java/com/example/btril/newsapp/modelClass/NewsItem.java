@@ -9,12 +9,22 @@ public class NewsItem {
     private String description;
     private String url;
     private String date;
+    private String urlToImage;
 
-    public NewsItem(String title, String description, String url, String date) {
+    public NewsItem(String title, String description, String url, String date, String urlToImage) {
         this.title = title;
         this.description = description;
         this.url = url;
         this.date = date;
+        this.urlToImage = urlToImage;
+    }
+
+    public String getUrlToImage() {
+        return urlToImage;
+    }
+
+    public void setUrlToImage(String urlToImage) {
+        this.urlToImage = urlToImage;
     }
 
     public String getTitle() {

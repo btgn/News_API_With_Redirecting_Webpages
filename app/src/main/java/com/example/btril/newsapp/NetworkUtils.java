@@ -24,12 +24,18 @@ import static android.content.ContentValues.TAG;
  */
 
 public class NetworkUtils {
-    public static final String NEWSAPI_BASE_URL = "https://newsapi.org/v1/articles?source=the-next-web&sortBy=latest&apiKey=8eee4df4a54c40eba1f140c8116f344c";
-    public static final String PARAM_QUERY = "q";
+    public static final String NEWSAPI_BASE_URL = "https://newsapi.org/v1/articles";
+    private static final String SOURCE = "source";
+    private static final String SORT_BY = "sortBy";
+    private static final String LATEST = "latest";
+    private static final String API_KEY = "apiKey";
 
-    public static URL makeURL(String searchQuery) {
+
+    public static URL makeURL(String source) {
         Uri uri = Uri.parse(NEWSAPI_BASE_URL).buildUpon()
-                .appendQueryParameter(PARAM_QUERY, searchQuery)
+                .appendQueryParameter(SOURCE, source)
+                .appendQueryParameter(SORT_BY, LATEST)
+                .appendQueryParameter(API_KEY, "8eee4df4a54c40eba1f140c8116f344c")
                 .build();
 
         URL url = null;
@@ -75,7 +81,8 @@ public class NetworkUtils {
             String desc = article.getString("description");
             String url = article.getString("url");
             String date = article.getString("publishedAt");
-            NewsItem data = new NewsItem(title, desc, url, date);
+            String urlToImage = article.getString("urlToImage");
+            NewsItem data = new NewsItem(title, desc, url, date, urlToImage);
             res.add(data);
         }
         return res;

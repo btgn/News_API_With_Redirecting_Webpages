@@ -1,83 +1,98 @@
 package com.example.btril.newsapp;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.example.btril.newsapp.modelClass.NewsItem;
+import com.example.btril.newsapp.modelClass.Contract;
+import com.squareup.picasso.Picasso;
 
-import org.w3c.dom.Text;
-
-import java.util.ArrayList;
+import static android.content.ContentValues.TAG;
 
 /**
  * Created by btril on 06/27/17.
  */
 
-public class NewsAdapter extends RecyclerView.Adapter<NewsAdapter.ArticleHolder> {
+public class NewsAdapter extends RecyclerView.Adapter<NewsAdapter.ItemHolder> {
 
-    private ArrayList<NewsItem> data;
-    ItemClickListener listener;
+    private Cursor cursor;
+    private ItemClickListener listener;
+    private Context con;
 
-    public interface ItemClickListener {
-        void onItemClick(int clickedThis);
-    }
-
-    public NewsAdapter(ArrayList<NewsItem> data, ItemClickListener listener) {
-        this.data = data;
+    public NewsAdapter(Cursor cursor, ItemClickListener listener) {
+        this.cursor = cursor;
         this.listener = listener;
     }
 
-    @Override
-    public ArticleHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        Context con = parent.getContext();
-        LayoutInflater inflater = LayoutInflater.from(con);
-
-        View view = inflater.inflate(R.layout.list_item, parent, false);
-        ArticleHolder holder = new ArticleHolder(view);
-        return holder;
+    /*cdreating an interface to handle click events for the application*/
+    public interface ItemClickListener{
+        void onItemClick(Cursor cursor, int clickedItem);
     }
 
+    /*view holder to get the items from the layout */
     @Override
-    public void onBindViewHolder(ArticleHolder holder, int position) {
+    public ItemHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        con = parent.getContext();
+        LayoutInflater li = LayoutInflater.from(con);
+        View view = li.inflate(R.layout.list_item, parent, false);
+        ItemHolder ih = new ItemHolder(view);
+        return ih;
+    }
+
+    /*binding the clicked item from the view of the app*/
+    @Override
+    public void onBindViewHolder(ItemHolder holder, int position) {
         holder.bind(position);
     }
 
     @Override
     public int getItemCount() {
-        return data.size();
+        return cursor.getCount();
     }
 
-    class ArticleHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
-
+    class ItemHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
         TextView title;
         TextView desc;
         TextView date;
-//        String url;
+        ImageView image;
 
-        ArticleHolder(View itemView) {
-            super(itemView);
-            title = (TextView) itemView.findViewById(R.id.title);
-            desc = (TextView) itemView.findViewById(R.id.desc);
-            date = (TextView) itemView.findViewById(R.id.date);
-            itemView.setOnClickListener(this);
+        ItemHolder(View view){
+            super(view);
+            title = (TextView) view.findViewById(R.id.title);
+            desc = (TextView) view.findViewById(R.id.desc);
+            date = (TextView) view.findViewById(R.id.date);
+            image = (ImageView) view.findViewById(R.id.image);
+            view.setOnClickListener(this);
+
         }
 
+        /*adding the selected items details like title, description, date, url and image to the database*/
         public void bind(int index) {
-            NewsItem news = data.get(index);
-            title.setText(news.getTitle());
-            desc.setText(news.getDescription());
-            date.setText(news.getDate());
-//            url = news.getUrl();
+            cursor.moveToPosition(index);
+            title.setText(cursor.getString(cursor.getColumnIndex(Contract.TABLE_ARTICLES.COLUMN_NAME_TITLE)));
+            desc.setText(cursor.getString(cursor.getColumnIndex(Contract.TABLE_ARTICLES.COLUMN_NAME_DESCRIPTION)));
+            date.setText(cursor.getString(cursor.getColumnIndex(Contract.TABLE_ARTICLES.COLUMN_NAME_PUBLISHED_DATE)));
+            String url = cursor.getString(cursor.getColumnIndex(Contract.TABLE_ARTICLES.COLUMN_NAME_URL));
+            Log.d(TAG, url);
+            if (url != null) {
+                Picasso.with(con)
+                        .load(url)
+                        .into(image);
+            }
         }
 
         @Override
         public void onClick(View v) {
             int ind = getAdapterPosition();
-            listener.onItemClick(ind);
+            listener.onItemClick(cursor, ind);
+
+
         }
     }
 }
